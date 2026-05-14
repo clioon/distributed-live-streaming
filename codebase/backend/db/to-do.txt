@@ -1,0 +1,2 @@
+postgress vai ser puxado via docker
+o volume HLS precisa ser estudado como implementar.
