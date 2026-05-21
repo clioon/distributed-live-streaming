@@ -1,0 +1,44 @@
+===============================================================================
+                       MIDDLEWARE PUB/SUB (midw-pub-sub)
+===============================================================================
+
+Este modulo atua como o "alarme" ou o "mensageiro" do sistema. Ele recebe
+notificacoes de rede do Nginx e traduz isso em tarefas para a fila de
+mensagens (RabbitMQ).
+
+-------------------------------------------------------------------------------
+1. O QUE ELE FAZ NA PRATICA?
+-------------------------------------------------------------------------------
+Roda uma API web ultraleve em Python utilizando o framework Flask e a 
+biblioteca Pika (cliente RabbitMQ).
+
+* Recebe o Gatilho: Escuta na rota "/on_publish" aguardando o Nginx avisar 
+  que um novo usuario conectou.
+  
+* Publicador (Publisher): Assim que recebe o aviso, ele se conecta ao servidor
+  RabbitMQ e publica uma mensagem JSON na fila "transcode_queue" informando a
+  chave da stream (ex: "teste") e a acao a ser tomada ("start").
+
+* Resposta de Autorizacao: Retorna um status HTTP 200 (OK) para o Nginx,
+  autorizando o OBS a continuar enviando o video.
+
+-------------------------------------------------------------------------------
+2. ESTRUTURA DO MODULO
+-------------------------------------------------------------------------------
+* Dockerfile: Usa uma imagem Python Alpine, instala Flask e Pika, e executa 
+  o script principal.
+  
+* publisher.py: O codigo fonte da API. Contem a rota web e a logica de 
+  conexao com o message broker (RabbitMQ).
+
+-------------------------------------------------------------------------------
+3. COMO USAR E VALIDAR
+-------------------------------------------------------------------------------
+Para inspecionar se o middleware esta recebendo os gatilhos e enviando para
+a fila, acompanhe os logs do container:
+$ docker logs -f python-middleware
+
+Ao iniciar a live no OBS, voce devera ver imediatamente:
+"Uma nova live comecou na aplicacao 'live' com a chave 'teste'."
+"Mensagem enviada para a fila transcode_queue com sucesso!"
+===============================================================================

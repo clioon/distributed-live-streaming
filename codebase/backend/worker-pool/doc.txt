@@ -1,0 +1,46 @@
+===============================================================================
+                       WORKER POOL FFMPEG (worker-pool)
+===============================================================================
+
+Este modulo e a forca bruta do sistema. Ele trabalha de forma assincrona
+nos bastidores, aguardando ordens da fila de mensagens para puxar o video, 
+processa-lo pesadamente e salva-lo no disco compartilhado.
+
+-------------------------------------------------------------------------------
+1. O QUE ELE FAZ NA PRATICA?
+-------------------------------------------------------------------------------
+Roda um script Python continuo que atua como Consumidor (Subscriber) do RabbitMQ,
+dentro de um ambiente Linux que possui a ferramenta FFmpeg instalada.
+
+* Consumidor de Fila: O script Python fica 100% do tempo escutando a fila 
+  "transcode_queue" no RabbitMQ.
+  
+* Processamento (FFmpeg): Quando uma mensagem chega, o Python extrai a chave
+  da stream e invoca (via subprocess) um comando de terminal do FFmpeg.
+  
+* Fatiamento HLS: O FFmpeg conecta via rede interna ao Nginx, puxa o video 
+  bruto da RAM, corta em pedacos de 2 segundos (.ts) e gera o indice (.m3u8), 
+  salvando tudo no volume mapeado (/tmp/hls).
+
+-------------------------------------------------------------------------------
+2. ESTRUTURA DO MODULO
+-------------------------------------------------------------------------------
+* Dockerfile: Usa Python Alpine, instala a ferramenta de midia FFmpeg e a 
+  biblioteca Pika. Cria a pasta interna de processamento.
+  
+* subscriber.py: O codigo fonte que escuta o RabbitMQ, monta o comando gigante
+  do FFmpeg de forma dinamica e controla a execucao do processo no sistema.
+
+-------------------------------------------------------------------------------
+3. COMO USAR E VALIDAR
+-------------------------------------------------------------------------------
+Verifique os logs para ver o trabalhador entrando em acao:
+$ docker logs -f ffmpeg-worker
+
+Ao iniciar a live no OBS (e a mensagem passar pelo middleware), o worker exibe:
+"[*] Iniciando transcodificacao para a chave: 'teste'..."
+
+Para provar que o trabalho esta sendo feito, va ate a pasta fisica na raiz
+do projeto chamada "shared-hls". Voce vera os arquivos .ts e .m3u8 sendo
+criados magicamente a cada 2 segundos.
+===============================================================================

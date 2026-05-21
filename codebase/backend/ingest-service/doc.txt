@@ -1,0 +1,43 @@
+===============================================================================
+                       SERVICO DE INGESTAO (ingest-service)
+===============================================================================
+
+Este modulo e a porta de entrada de todo o sistema distribuido de streaming. A
+sua unica funcao e receber o sinal de video bruto enviado pelo OBS Studio,
+manter o video na memoria e avisar o sistema que a transmissao comecou.
+
+-------------------------------------------------------------------------------
+1. O QUE ELE FAZ NA PRATICA?
+-------------------------------------------------------------------------------
+O ingest-service roda um servidor Nginx equipado com o modulo rtmp.
+
+* Sem armazenamento em disco: Configurado com "record off". O video nao e salvo 
+  no HD do container, garantindo maxima velocidade. O fluxo fica na memoria RAM.
+  
+* Isolamento de Rede: O mundo externo comunica-se com ele exclusivamente
+  atraves do protocolo RTMP (porta 1935).
+
+* Gatilho Automatico (Webhook): Possui a diretiva "on_publish". Assim que o 
+  OBS conecta, o Nginx congela a conexao por uma fracao de segundo e envia uma 
+  requisicao HTTP POST para o modulo "middleware" avisando: "A live comecou!".
+
+-------------------------------------------------------------------------------
+2. ESTRUTURA DO MODULO
+-------------------------------------------------------------------------------
+* Dockerfile: Define a imagem base do Nginx e injeta o arquivo de configuracao.
+  
+* nginx.conf: Arquivo que abre a porta 1935, cria o ponto de escuta ("live") e
+  aponta o gatilho on_publish para a API do middleware interno.
+
+-------------------------------------------------------------------------------
+3. COMO USAR E VALIDAR
+-------------------------------------------------------------------------------
+Apos subir o projeto inteiro via Docker Compose e iniciar a transmissao no OBS:
+
+Para validar se o Nginx esta recebendo e repassando o aviso, olhe os logs:
+$ docker logs -f nginx-ingest
+
+Voce vera o IP interno e o comando PUBLISH quando a live encerrar. Se o OBS
+nao desconectou imediatamente ao iniciar a live, significa que a comunicacao
+com o middleware (on_publish) foi bem sucedida.
+===============================================================================

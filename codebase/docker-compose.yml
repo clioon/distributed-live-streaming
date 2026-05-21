@@ -1,0 +1,46 @@
+services:
+
+  # =============== NGINX =================
+  ingest:
+    build: 
+      context: ./backend/ingest-service
+    container_name: nginx-ingest
+    ports:
+      - "1935:1935" # Porta de entrada do vídeo do OBS
+    networks:
+      - streaming-network
+
+  # =============== MIDDLEWARE ===============
+  middleware:
+    build:
+      context: ./backend/midw-pub-sub
+    container_name: middleware-pubsub
+    networks:
+      - streaming-network
+    
+  # =============== RABBITMQ ===============
+  rabbitmq:
+    image: rabbitmq:3-management
+    container_name: rabbitmq-broker
+    ports:
+      - "5672:5672"   # Porta padrão para os scripts Python enviarem/receberem mensagens
+      - "15672:15672" # Porta para a Interface Visual Web (Management UI)
+    networks:
+      - streaming-network
+
+  # =============== WORKER FFMPEG ===============
+  worker:
+    build:
+      context: ./backend/worker-pool
+    container_name: ffmpeg-worker
+    volumes:
+      # Cria uma pasta chamada 'shared-hls' na raiz do seu projeto para você ver os arquivos surgindo
+      - ./shared-hls:/tmp/hls
+    networks:
+      - streaming-network
+    depends_on:
+      - ingest
+
+networks:
+  streaming-network:
+    driver: bridge
