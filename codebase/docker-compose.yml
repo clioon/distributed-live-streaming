@@ -10,11 +10,11 @@ services:
     networks:
       - streaming-network
 
-  # =============== MIDDLEWARE ===============
-  middleware:
+  # =============== API ===============
+  api:
     build:
-      context: ./backend/midw-pub-sub
-    container_name: middleware-pubsub
+      context: ./backend/api
+    container_name: api-backend
     networks:
       - streaming-network
     
