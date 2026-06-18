@@ -1,0 +1,38 @@
+sequenceDiagram
+    autonumber
+    actor S as Streamer (OBS)
+    participant IG as Ingest Service
+    participant API as API REST
+    participant MQ as RabbitMQ (Fila)
+    participant ORC as Worker Pool Orchestrator
+    participant W as Worker (FFmpeg)
+    participant HLS as Volume HLS
+    participant PG as PostgreSQL (Primary)
+    participant PGR as PostgreSQL (Réplica)
+
+    rect rgb(76, 61, 128)
+    Note over S,PGR: Fluxo 1 — Streamer inicia uma live (nova arquitetura)
+
+    S->>IG: Conecta + envia token da live (RTMP / TCP-Socket)
+    Note right of S: Comunicação Transiente
+
+    IG->>API: POST /lives (notifica nova live)
+    API->>PG: INSERT live (status=active)
+    PG-->>PGR: replicação (failover / redundância)
+
+    IG->>MQ: publica evento { token da live }
+    Note right of IG: Cap.2 Desacoplamento Temporal
+
+    ORC->>MQ: GET (consome evento da fila)
+    Note over ORC: escuta a fila continuamente
+
+    ORC->>W: sobe 1 worker p/ a live<br/>(imagem base + ENV token)
+    Note over ORC,W: mapa worker → token (JSON, em memória)
+
+    W->>IG: FFmpeg puxa o RTMP da live
+    W->>W: Transcodifica RTMP → HLS (.m3u8 + .ts)
+    W->>HLS: Salva chunks de vídeo
+
+    W-->>ORC: Heartbeat / ACK periódico
+    Note over ORC,W: Cap.8 Fail-stop — sem ACK → Orchestrator faz respawn com a mesma secret
+    end

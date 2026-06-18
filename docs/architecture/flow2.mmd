@@ -1,0 +1,31 @@
+sequenceDiagram
+    autonumber
+    actor E as Espectador
+    participant FE as Frontend (HTML+JS / hls.js)
+    participant API as API REST
+    participant PG as PostgreSQL (Primary)
+    participant PGR as PostgreSQL (Réplica)
+    participant HLS as Volume HLS
+
+    rect rgb(54, 122, 127)
+    Note over E,HLS: Fluxo 2 — Espectador assiste a uma live
+
+    E->>FE: Abre a página no navegador
+    Note right of E: Frontend roda no cliente<br/>(HTML/JS servido estaticamente)
+
+    FE->>API: GET /lives (lista lives ativas)
+    API->>PG: SELECT * FROM lives WHERE active = true
+    Note over PG,PGR: Réplica em standby — assume no failover<br/>(redundância dos dados)
+    PG-->>API: [{ id: 123, title: "Live do João" }, ...]
+    API-->>FE: JSON com lives
+    FE-->>E: Renderiza lista de lives
+
+    E->>FE: Clica em "Live do João"
+    FE->>HLS: GET /streams/live_123/index.m3u8
+    HLS-->>FE: Playlist HLS
+    loop a cada chunk
+        FE->>HLS: GET /streams/live_123/chunk_NNN.ts
+        HLS-->>FE: Chunk de vídeo (.ts)
+    end
+    Note over FE,E: hls.js decodifica e reproduz o vídeo<br/>Cap.4: Comunicação Transiente (HTTP)
+    end

@@ -1,0 +1,22 @@
+flowchart TD
+    classDef rootCls fill:#4c3d80,stroke:#dfe5ee,stroke-width:1.5px,color:#ffffff,font-weight:bold
+    classDef innerCls fill:#1a1a24,stroke:#dfe5ee,stroke-width:1.2px,color:#f2f5fa
+
+    ROOT["Teorema CAP<br/>Escolha 2 de 3"]:::rootCls
+
+    subgraph CP["✅ Dados / $ → CP"]
+        direction TB
+        CPDESC["<b>Consistency + Partition Tolerance</b><br/><br/>PostgreSQL <b>Primary + Réplica</b> guardam<br/>usuários, lives e doações.<br/><br/>Se a rede falhar, a transação é<br/><b>RECUSADA</b> (sacrifica Disponibilidade).<br/>Nunca duplica dinheiro.<br/><b>Consistência Forte.</b>"]:::innerCls
+    end
+
+    subgraph AP["✅ Chat da Live → AP"]
+        direction TB
+        APDESC["<b>Availability + Partition Tolerance</b><br/><br/>Redis Pub/Sub distribui as mensagens<br/>em tempo real entre espectadores.<br/><br/>Se a rede falhar entre servidores Redis,<br/>o chat <b>continua funcionando</b>.<br/>Mensagens podem chegar com delay<br/>(<b>Consistência Eventual</b> — Cap.7),<br/>mas o chat <b>NÃO trava.</b>"]:::innerCls
+    end
+
+    ROOT --> CP
+    ROOT --> AP
+
+    style CP fill:#c2566a,stroke:#dfe5ee,stroke-width:1.5px,color:#ffffff
+    style AP fill:#3f9ba0,stroke:#dfe5ee,stroke-width:1.5px,color:#ffffff
+    linkStyle 0,1 stroke:#c4ccd8,stroke-width:2px

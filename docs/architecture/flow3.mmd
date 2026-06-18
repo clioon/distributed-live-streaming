@@ -1,0 +1,32 @@
+sequenceDiagram
+    autonumber
+    actor V1 as Espectador 1
+    actor V2 as Espectador 2
+    actor V3 as Espectador 3
+    participant CHAT as Chat Service (WebSocket)
+    participant REDIS as Redis (Pub/Sub)
+
+    rect rgb(165, 75, 90)
+    Note over V1,REDIS: Fluxo 3 — Chat da Live (Pub/Sub, tempo real)
+
+    V1->>CHAT: WebSocket connect (live_123)
+    V2->>CHAT: WebSocket connect (live_123)
+    V3->>CHAT: WebSocket connect (live_123)
+    CHAT->>REDIS: SUBSCRIBE "chat:live_123"
+    Note over CHAT,REDIS: Cap.2 — Desacoplamento Referencial<br/>(canal por live)
+
+    V1->>CHAT: WebSocket: { msg: "Salve!" }
+    Note over CHAT: Valida + adiciona timestamp NTP<br/>(Cap.5: Ordenação)
+
+    CHAT->>REDIS: PUBLISH "chat:live_123"<br/>{ user: V1, msg: "Salve!", ts }
+    REDIS-->>CHAT: notifica subscribers do canal
+
+    par broadcast simultâneo
+        CHAT-->>V1: WebSocket: "Salve!"
+    and
+        CHAT-->>V2: WebSocket: "Salve!"
+    and
+        CHAT-->>V3: WebSocket: "Salve!"
+    end
+    Note over V1,V3: Todos veem a mensagem na mesma ordem<br/>Cap.3: Async I/O / Threads no Chat Service
+    end

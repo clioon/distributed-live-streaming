@@ -1,0 +1,29 @@
+{
+  "theme": "base",
+  "themeVariables": {
+    "fontFamily": "Trebuchet MS, Verdana, Arial, sans-serif",
+    "fontSize": "16px",
+    "primaryColor": "#1a1a24",
+    "primaryTextColor": "#f2f5fa",
+    "primaryBorderColor": "#dfe5ee",
+    "lineColor": "#c4ccd8",
+    "secondaryColor": "#2c6f73",
+    "tertiaryColor": "#243b6b",
+    "actorBkg": "#1a1a24",
+    "actorBorder": "#dfe5ee",
+    "actorTextColor": "#f2f5fa",
+    "actorLineColor": "#8b93a3",
+    "signalColor": "#dfe5ee",
+    "signalTextColor": "#f2f5fa",
+    "labelBoxBkgColor": "#4a4a4a",
+    "labelBoxBorderColor": "#6a6a6a",
+    "labelTextColor": "#ffffff",
+    "loopTextColor": "#ffffff",
+    "noteBkgColor": "#4a4a4a",
+    "noteTextColor": "#ffffff",
+    "noteBorderColor": "#6a6a6a",
+    "activationBkgColor": "#2c6f73",
+    "activationBorderColor": "#dfe5ee",
+    "sequenceNumberColor": "#15151a"
+  }
+}
