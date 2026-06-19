@@ -17,22 +17,24 @@ sequenceDiagram
     Note right of S: Comunicação Transiente
 
     IG->>API: POST /lives (notifica nova live)
-    API->>PG: INSERT live (status=active)
+    API->>PG: INSERT live (status = active)
     PG-->>PGR: replicação (failover / redundância)
+    Note over PG,PGR: Postgres é a fonte da verdade<br/>do "quais lives estão ativas"<br/>(usado pelo Healthcheck no recovery — flow5)
 
     IG->>MQ: publica evento { token da live }
     Note right of IG: Cap.2 Desacoplamento Temporal
 
-    ORC->>MQ: GET (consome evento da fila)
+    ORC->>MQ: GET (consome evento) + ACK
     Note over ORC: escuta a fila continuamente
 
     ORC->>W: sobe 1 worker p/ a live<br/>(imagem base + ENV token)
-    Note over ORC,W: mapa worker → token (JSON, em memória)
+    ORC->>PG: UPDATE live SET worker_id = ..., spawned_at = now()
+    Note over ORC,W: mapa worker → token (JSON, em memória)<br/>é apenas cache — verdade está no Postgres
 
     W->>IG: FFmpeg puxa o RTMP da live
     W->>W: Transcodifica RTMP → HLS (.m3u8 + .ts)
     W->>HLS: Salva chunks de vídeo
 
     W-->>ORC: Heartbeat / ACK periódico
-    Note over ORC,W: Cap.8 Fail-stop — sem ACK → Orchestrator faz respawn com a mesma secret
+    Note over ORC,W: Cap.8 Fail-stop — sem ACK → Orchestrator faz respawn com o mesmo token
     end

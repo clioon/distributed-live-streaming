@@ -88,6 +88,7 @@ container(1.6, 9.0, 3.7, 1.7, C_PURPLE, "Ingest Service")
 container(4.2, 5.9, 3.9, 2.7, C_RED, "Fila de Mensagens")
 container(1.6, 2.9, 2.3, 2.4, C_PURPLE, "API Service (FastAPI)", tfs=10)
 container(4.2, 2.9, 5.0, 2.4, C_TEAL, "Worker Pool Orchestrator", tfs=11)
+container(9.5, 6.0, 3.7, 2.0, C_RED, "Healthcheck", tfs=10)
 container(10.0, 2.9, 3.2, 2.4, C_PURPLE, "Chat Service (FastAPI)", tfs=10)
 container(1.6, 0.4, 7.6, 2.2, C_ORANGE, "Armazenamento")
 container(10.0, 0.4, 3.2, 2.2, C_RED, "Middleware Pub/Sub")
@@ -119,6 +120,11 @@ node(5.55, 3.95, 2.05, 1.75,
      fc=C_NODE_TEAL, fs=7.3)
 node(7.9, 4.5, 1.75, 0.68, "Worker (live A)\nFFmpeg", fs=7.6)
 node(7.9, 3.45, 1.75, 0.68, "Worker (live B)\nFFmpeg", fs=7.6)
+
+# Healthcheck (NEW)
+node(11.35, 6.95, 3.3, 1.45,
+     "Health Monitor\n• ping Orchestrator (heartbeat)\n• se cair → redeploy do Orchestrator\n• lê lives ativas do Postgres\n• re-publica eventos na fila",
+     fs=7.2)
 
 # Chat
 node(11.6, 3.9, 2.5, 1.55,
@@ -165,6 +171,17 @@ arrow((7.0, 4.25), (6.6, 4.1), color=C_DOT, ls=(0, (3, 2)), lw=1.3)
 arrow((7.0, 3.25), (6.6, 3.4), color=C_DOT, ls=(0, (3, 2)), lw=1.3)
 elabel(7.75, 2.78, "heartbeat — sem ACK → respawn", fs=7.3, color=C_TEXT)
 
+# Healthcheck <-> Orchestrator (heartbeat)
+arrow((10.55, 6.22), (8.7, 5.32), color=C_DOT, ls=(0, (3, 2)), lw=1.4, style="<|-|>", rad=0.0)
+elabel(10.05, 5.75, "heartbeat\nmonitora orchestrator", fs=7.0, color=C_TEXT)
+
+# Healthcheck -> Queue (recovery: re-publica eventos)
+arrow((9.65, 7.3), (8.15, 7.65), color="#ffb04a", ls=(0, (4, 2)), lw=1.6, rad=-0.1)
+elabel(8.85, 8.05, "recovery:\nre-publica eventos", fs=6.8, color=C_TEXT)
+
+# (detalhe do Healthcheck -> Postgres na recovery está no flow5;
+# aqui só mostramos a leitura via texto dentro do nó Health Monitor.)
+
 # workers -> Volume HLS
 arrow((7.7, 4.16), (7.2, 2.02), rad=0.08)
 arrow((8.0, 3.11), (7.6, 2.02), rad=0.05)
@@ -174,9 +191,13 @@ elabel(8.55, 2.5, "Gera HLS\n.m3u8/.ts")
 arrow((2.8, 2.88), (2.75, 2.22), rad=0.0)
 elabel(2.5, 2.5, "CRUD")
 
+# Orchestrator -> PostgreSQL (persiste lives ativas para recovery)
+arrow((4.85, 3.1), (3.6, 2.18), color="#ffd27a", lw=1.5, rad=-0.18)
+elabel(4.55, 2.55, "persiste\nlive ativa", fs=6.8, color=C_TEXT)
+
 # Espectadores -> API (HTTP GET /lives)
 arrow((15.85, 7.65), (3.9, 4.55), rad=0.14)
-elabel(11.7, 7.5, "HTTP GET /lives")
+elabel(14.55, 7.25, "HTTP GET /lives")
 
 # Espectadores -> Volume HLS (HTTP GET .m3u8)
 arrow((15.85, 7.15), (8.5, 1.7), rad=0.18)

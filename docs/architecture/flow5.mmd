@@ -1,0 +1,46 @@
+sequenceDiagram
+    autonumber
+    participant HM as Health Monitor
+    participant DOCK as Docker Daemon
+    participant ORC as Orchestrator (novo)
+    participant PG as PostgreSQL (Primary)
+    participant MQ as RabbitMQ (Fila)
+    participant W as Workers (FFmpeg)
+
+    rect rgb(194, 86, 106)
+    Note over HM,W: Fluxo 5 — Recuperação do Orchestrator (Cap.8 Fail-stop)
+
+    loop a cada N segundos
+        HM->>ORC: ping (heartbeat)
+        Note over HM,ORC: Orchestrator antigo responde normalmente
+    end
+
+    Note over ORC: 💥 Orchestrator antigo CAI<br/>(crash, OOM, host down)
+
+    HM->>ORC: ping (heartbeat)
+    Note over HM: timeout — sem resposta
+
+    HM->>DOCK: docker run orchestrator:base (redeploy)
+    DOCK-->>HM: novo container iniciado
+    Note over HM,DOCK: imagem base, sem estado em memória
+
+    HM->>PG: SELECT * FROM lives WHERE status = 'active'
+    PG-->>HM: [ live_abc, live_xyz, ... ]
+    Note right of HM: fonte da verdade<br/>do que estava rodando
+
+    loop para cada live ativa
+        HM->>MQ: PUBLISH evento { token da live }
+        Note over HM,MQ: re-popula a fila com os eventos<br/>que precisam ser reprocessados
+    end
+
+    Note over ORC: Orchestrator novo está pronto e começa a escutar
+
+    loop para cada evento na fila
+        ORC->>MQ: GET (consume) + ACK
+        ORC->>W: spawn worker (imagem base + ENV token)
+        ORC->>PG: UPDATE live SET worker_id = ..., spawned_at = now()
+    end
+
+    W-->>ORC: heartbeat — workers vivos
+    Note over HM,W: Sistema 100% recuperado.<br/>Espectadores continuam recebendo HLS<br/>(volume HLS persistiu durante a queda).
+    end
