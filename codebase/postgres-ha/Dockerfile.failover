@@ -1,0 +1,8 @@
+FROM python:3.14-slim
+
+WORKDIR /app
+
+RUN pip install --no-cache-dir "psycopg[binary]==3.3.2"
+COPY failover_monitor.py .
+
+CMD ["python", "-u", "failover_monitor.py"]

@@ -1,0 +1,12 @@
+{
+  "name": "distributed-live-streaming-frontend",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node scripts/build.mjs",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "hls.js": "1.6.13"
+  }
+}

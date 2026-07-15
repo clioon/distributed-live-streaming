@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://distributed-live.local/contracts/events/live.ingest.started.v1.schema.json",
+  "title": "Live ingest started event",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "id",
+    "type",
+    "source",
+    "subject",
+    "occurred_at",
+    "correlation_id",
+    "aggregate_version",
+    "data"
+  ],
+  "properties": {
+    "id": { "type": "string", "format": "uuid" },
+    "type": { "const": "live.ingest.started.v1" },
+    "source": { "type": "string", "minLength": 1, "maxLength": 120 },
+    "subject": { "type": "string", "pattern": "^live/[0-9a-f-]{36}$" },
+    "occurred_at": { "type": "string", "format": "date-time" },
+    "correlation_id": { "type": "string", "format": "uuid" },
+    "aggregate_version": { "type": "integer", "minimum": 1 },
+    "data": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["live_id", "ingest_session_id", "aggregate_version"],
+      "properties": {
+        "live_id": { "type": "string", "format": "uuid" },
+        "ingest_session_id": { "type": "string", "format": "uuid" },
+        "aggregate_version": { "type": "integer", "minimum": 1 }
+      }
+    }
+  }
+}

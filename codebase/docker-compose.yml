@@ -1,46 +1,392 @@
+name: distributed-live-streaming
+
 services:
-
-  # =============== NGINX =================
-  ingest:
-    build: 
-      context: ./backend/ingest-service
-    container_name: nginx-ingest
-    ports:
-      - "1935:1935" # Porta de entrada do vídeo do OBS
-    networks:
-      - streaming-network
-
-  # =============== API ===============
-  api:
-    build:
-      context: ./backend/api
-    container_name: api-backend
-    networks:
-      - streaming-network
-    
-  # =============== RABBITMQ ===============
-  rabbitmq:
-    image: rabbitmq:3-management
-    container_name: rabbitmq-broker
-    ports:
-      - "5672:5672"   # Porta padrão para os scripts Python enviarem/receberem mensagens
-      - "15672:15672" # Porta para a Interface Visual Web (Management UI)
-    networks:
-      - streaming-network
-
-  # =============== WORKER FFMPEG ===============
-  worker:
-    build:
-      context: ./backend/worker-pool
-    container_name: ffmpeg-worker
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: streaming
+      POSTGRES_USER: streaming_app
+      POSTGRES_PASSWORD: streaming
     volumes:
-      # Cria uma pasta chamada 'shared-hls' na raiz do seu projeto para você ver os arquivos surgindo
-      - ./shared-hls:/tmp/hls
+      - postgres-primary-data:/var/lib/postgresql/data
+      - ./postgres-ha/migrations:/docker-entrypoint-initdb.d:ro
+    command:
+      [
+        "postgres",
+        "-c",
+        "wal_level=replica",
+        "-c",
+        "max_wal_senders=10",
+        "-c",
+        "max_replication_slots=10",
+        "-c",
+        "wal_keep_size=128MB",
+      ]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U streaming_app -d streaming"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
     networks:
       - streaming-network
+
+  postgres-replica:
+    build:
+      context: ./postgres-ha
+      dockerfile: Dockerfile.replica
+    environment:
+      POSTGRES_DB: streaming
+      POSTGRES_USER: streaming_app
+      POSTGRES_PASSWORD: streaming
+      PGDATA: /var/lib/postgresql/data
+    volumes:
+      - postgres-replica-data:/var/lib/postgresql/data
     depends_on:
-      - ingest
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U streaming_app -d streaming"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+    networks:
+      - streaming-network
+
+  postgres-router:
+    image: haproxy:3.0-alpine
+    ports:
+      - "55432:5432"
+      - "55433:5433"
+    volumes:
+      - ./postgres-ha/haproxy.cfg:/usr/local/etc/haproxy/haproxy.cfg:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      postgres-replica:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "nc -z 127.0.0.1 5432"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    networks:
+      - streaming-network
+
+  postgres-failover:
+    build:
+      context: ./postgres-ha
+      dockerfile: Dockerfile.failover
+    environment:
+      POSTGRES_DB: streaming
+      POSTGRES_USER: streaming_app
+      POSTGRES_PASSWORD: streaming
+      PRIMARY_HOST: postgres
+      REPLICA_HOST: postgres-replica
+      FAILURE_THRESHOLD: "2"
+      CHECK_INTERVAL_SECONDS: "1"
+    depends_on:
+      postgres:
+        condition: service_healthy
+      postgres-replica:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "kill -0 1"]
+      interval: 3s
+      timeout: 3s
+      retries: 10
+    networks:
+      - streaming-network
+
+  rabbitmq:
+    build:
+      context: ./message-broker
+    ports:
+      - "5672:5672"
+      - "15672:15672"
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 3s
+      timeout: 5s
+      retries: 30
+    networks:
+      - streaming-network
+
+  api-service:
+    build:
+      context: ./api-service
+    environment:
+      DATABASE_URL: postgresql://streaming_app:streaming@postgres-router:5432/streaming
+      AMQP_URL: amqp://guest:guest@rabbitmq:5672/%2Fstreaming
+      RTMP_SERVER: rtmp://localhost:1935/live
+    ports:
+      - "8001:8000"
+    depends_on:
+      postgres-router:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/ready')",
+        ]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    networks:
+      - streaming-network
+
+  worker-image:
+    image: distributed-live-streaming-worker:local
+    build:
+      context: ./worker
+    profiles: ["build-only"]
+    networks:
+      - streaming-network
+
+  worker-pool-orchestrator:
+    build:
+      context: ./worker-pool-orchestrator
+    container_name: worker-pool-orchestrator
+    environment:
+      AMQP_URL: amqp://guest:guest@rabbitmq:5672/%2Fstreaming
+      DATABASE_URL: postgresql://streaming_app:streaming@postgres-router:5432/streaming
+      WORKER_IMAGE: distributed-live-streaming-worker:local
+      DOCKER_NETWORK: distributed-live-streaming-network
+      HLS_VOLUME: distributed-live-hls-data
+      INGEST_BASE_URL: rtmp://ingest-service:1935/live
+      API_BASE_URL: http://api-service:8000
+    ports:
+      - "8003:8000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      postgres-router:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    labels:
+      streaming.component: orchestrator
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/ready')",
+        ]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+    networks:
+      - streaming-network
+
+  healthcheck:
+    build:
+      context: ./healthcheck
+    environment:
+      ORCHESTRATOR_URL: http://worker-pool-orchestrator:8000
+      ORCHESTRATOR_CONTAINER_NAME: worker-pool-orchestrator
+      FAILURE_THRESHOLD: "2"
+      COOLDOWN_CHECKS: "2"
+      CHECK_INTERVAL_SECONDS: "1"
+    ports:
+      - "8004:8000"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+    depends_on:
+      worker-pool-orchestrator:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/ready')",
+        ]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    networks:
+      - streaming-network
+
+  ingest-callback:
+    build:
+      context: ./ingest-service
+      dockerfile: Dockerfile.callback
+    environment:
+      API_BASE_URL: http://api-service:8000
+    depends_on:
+      api-service:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/live')",
+        ]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    networks:
+      - streaming-network
+
+  ingest-service:
+    build:
+      context: ./ingest-service
+      dockerfile: Dockerfile.rtmp
+    ports:
+      - "1935:1935"
+      - "18080:8080"
+    depends_on:
+      ingest-callback:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    networks:
+      - streaming-network
+
+  hls-origin:
+    build:
+      context: ./hls-volume
+    ports:
+      - "8082:8080"
+    volumes:
+      - hls-data:/var/hls:ro
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "-q",
+          "-O",
+          "-",
+          "http://127.0.0.1:8080/health/live",
+        ]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    networks:
+      - streaming-network
+
+  redis:
+    build:
+      context: ./redis-pubsub
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    networks:
+      - streaming-network
+
+  chat-service:
+    build:
+      context: ./chat-service
+    environment:
+      REDIS_URL: redis://redis:6379/0
+    ports:
+      - "8002:8000"
+    depends_on:
+      redis:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/ready')",
+        ]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    networks:
+      - streaming-network
+
+  frontend:
+    build:
+      context: ./frontend
+    ports:
+      - "8080:8080"
+    depends_on:
+      bff:
+        condition: service_healthy
+      chat-service:
+        condition: service_healthy
+      hls-origin:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "wget",
+          "-q",
+          "-O",
+          "-",
+          "http://127.0.0.1:8080/health/live",
+        ]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    networks:
+      - streaming-network
+
+  bff:
+    build:
+      context: ./bff
+    environment:
+      API_BASE_URL: http://api-service:8000
+      HLS_BASE_URL: http://localhost:8080/hls
+      CHAT_WS_BASE_URL: ws://localhost:8080
+    ports:
+      - "8000:8000"
+    depends_on:
+      api-service:
+        condition: service_healthy
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://localhost:8000/health/live')",
+        ]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+    networks:
+      - streaming-network
 
 networks:
   streaming-network:
+    name: distributed-live-streaming-network
     driver: bridge
+    ipam:
+      config:
+        - subnet: 172.28.0.0/16
+
+volumes:
+  postgres-primary-data:
+    name: distributed-live-postgres-primary-data
+  postgres-replica-data:
+    name: distributed-live-postgres-replica-data
+  rabbitmq-data:
+    name: distributed-live-rabbitmq-data
+  hls-data:
+    name: distributed-live-hls-data
+  redis-data:
+    name: distributed-live-redis-data

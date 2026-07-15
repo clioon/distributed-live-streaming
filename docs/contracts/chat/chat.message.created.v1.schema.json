@@ -1,0 +1,35 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://distributed-live.local/contracts/chat/chat.message.created.v1.schema.json",
+  "title": "Created chat message",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "type",
+    "message_id",
+    "client_message_id",
+    "live_id",
+    "user",
+    "sequence",
+    "sent_at",
+    "text"
+  ],
+  "properties": {
+    "type": { "const": "chat.message.created" },
+    "message_id": { "type": "string", "format": "uuid" },
+    "client_message_id": { "type": "string", "format": "uuid" },
+    "live_id": { "type": "string", "format": "uuid" },
+    "user": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "display_name"],
+      "properties": {
+        "id": { "type": "string", "format": "uuid" },
+        "display_name": { "type": "string", "minLength": 1, "maxLength": 80 }
+      }
+    },
+    "sequence": { "type": "integer", "minimum": 1 },
+    "sent_at": { "type": "string", "format": "date-time" },
+    "text": { "type": "string", "minLength": 1, "maxLength": 500 }
+  }
+}

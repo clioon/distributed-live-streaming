@@ -1,0 +1,79 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#f4f6f2" />
+    <meta name="bff-base-url" content="" />
+    <title>Distributed Live</title>
+    <link rel="stylesheet" href="/styles.css" />
+    <script src="/vendor/hls.min.js" defer></script>
+    <script type="module" src="/src/app.js"></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="Distributed Live">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span>Distributed Live</span>
+      </a>
+      <div class="connection-status" id="connection-status" role="status">
+        <span class="status-dot" aria-hidden="true"></span>
+        <span id="connection-label">Carregando</span>
+      </div>
+    </header>
+
+    <main class="workspace">
+      <aside class="catalog" aria-labelledby="catalog-title">
+        <div class="section-heading">
+          <div>
+            <p class="eyebrow">Agora</p>
+            <h1 id="catalog-title">Transmissoes ao vivo</h1>
+          </div>
+          <span class="live-count" id="live-count">0</span>
+        </div>
+        <div class="live-list" id="live-list" aria-live="polite"></div>
+      </aside>
+
+      <section class="stage" aria-labelledby="live-title">
+        <div class="video-shell">
+          <video id="video-player" controls playsinline></video>
+          <div class="video-empty" id="video-empty">
+            <span class="signal-bars" aria-hidden="true"><i></i><i></i><i></i></span>
+            <p>Nenhuma transmissao selecionada</p>
+          </div>
+        </div>
+        <div class="live-summary">
+          <div>
+            <p class="eyebrow" id="live-state">Fora do ar</p>
+            <h2 id="live-title">Escolha uma live</h2>
+            <p id="live-description">O player aparecera aqui.</p>
+          </div>
+          <div class="live-owner" id="live-owner" hidden></div>
+        </div>
+      </section>
+
+      <aside class="chat" aria-labelledby="chat-title">
+        <div class="chat-heading">
+          <div>
+            <p class="eyebrow">Conversa</p>
+            <h2 id="chat-title">Chat ao vivo</h2>
+          </div>
+          <span class="chat-sequence" id="chat-sequence">#0</span>
+        </div>
+        <ol class="messages" id="messages" aria-live="polite"></ol>
+        <form class="chat-form" id="chat-form">
+          <label class="sr-only" for="chat-input">Mensagem</label>
+          <input
+            id="chat-input"
+            name="message"
+            maxlength="500"
+            autocomplete="off"
+            placeholder="Mensagem"
+            disabled
+          />
+          <button type="submit" disabled>Enviar</button>
+        </form>
+      </aside>
+    </main>
+  </body>
+</html>

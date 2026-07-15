@@ -1,0 +1,7 @@
+FROM postgres:17-alpine
+
+COPY replica-entrypoint.sh /usr/local/bin/replica-entrypoint.sh
+RUN chmod 0755 /usr/local/bin/replica-entrypoint.sh
+
+ENTRYPOINT ["replica-entrypoint.sh"]
+CMD ["postgres", "-c", "hot_standby=on"]

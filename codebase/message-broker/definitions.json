@@ -1,0 +1,128 @@
+{
+  "rabbit_version": "4.1",
+  "users": [
+    {
+      "name": "guest",
+      "password_hash": "mtPbNkNyEAYoG+K+2ctDbRkCbTL/wfif6zfKPjTajXHYUAFg",
+      "hashing_algorithm": "rabbit_password_hashing_sha256",
+      "tags": ["administrator"]
+    }
+  ],
+  "vhosts": [
+    {
+      "name": "/streaming"
+    }
+  ],
+  "permissions": [
+    {
+      "user": "guest",
+      "vhost": "/streaming",
+      "configure": ".*",
+      "write": ".*",
+      "read": ".*"
+    }
+  ],
+  "topic_permissions": [],
+  "parameters": [],
+  "global_parameters": [],
+  "policies": [
+    {
+      "vhost": "/streaming",
+      "name": "orchestrator-delivery-limit",
+      "pattern": "^orchestrator\\.live-lifecycle\\.v1$",
+      "apply-to": "queues",
+      "definition": {
+        "delivery-limit": 5
+      },
+      "priority": 10
+    }
+  ],
+  "queues": [
+    {
+      "name": "orchestrator.live-lifecycle.v1",
+      "vhost": "/streaming",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-dead-letter-exchange": "streaming.events.dlx"
+      }
+    },
+    {
+      "name": "orchestrator.live-lifecycle.retry.5s.v1",
+      "vhost": "/streaming",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum",
+        "x-message-ttl": 5000,
+        "x-dead-letter-exchange": "streaming.events",
+        "x-dead-letter-routing-key": "live.ingest.retry.v1"
+      }
+    },
+    {
+      "name": "orchestrator.live-lifecycle.dlq.v1",
+      "vhost": "/streaming",
+      "durable": true,
+      "auto_delete": false,
+      "arguments": {
+        "x-queue-type": "quorum"
+      }
+    }
+  ],
+  "exchanges": [
+    {
+      "name": "streaming.events",
+      "vhost": "/streaming",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "streaming.events.retry",
+      "vhost": "/streaming",
+      "type": "direct",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    },
+    {
+      "name": "streaming.events.dlx",
+      "vhost": "/streaming",
+      "type": "topic",
+      "durable": true,
+      "auto_delete": false,
+      "internal": false,
+      "arguments": {}
+    }
+  ],
+  "bindings": [
+    {
+      "source": "streaming.events",
+      "vhost": "/streaming",
+      "destination": "orchestrator.live-lifecycle.v1",
+      "destination_type": "queue",
+      "routing_key": "live.ingest.*.v1",
+      "arguments": {}
+    },
+    {
+      "source": "streaming.events.retry",
+      "vhost": "/streaming",
+      "destination": "orchestrator.live-lifecycle.retry.5s.v1",
+      "destination_type": "queue",
+      "routing_key": "orchestrator.live-lifecycle.retry.5s.v1",
+      "arguments": {}
+    },
+    {
+      "source": "streaming.events.dlx",
+      "vhost": "/streaming",
+      "destination": "orchestrator.live-lifecycle.dlq.v1",
+      "destination_type": "queue",
+      "routing_key": "#",
+      "arguments": {}
+    }
+  ]
+}
