@@ -5,7 +5,7 @@ Plataforma academica distribuida de live streaming. O fluxo integrado recebe RTM
 ## Executar
 
 ```powershell
-docker compose -f codebase/docker-compose.yml up -d --build --wait
+docker compose -f codebase/docker-compose.yml --profile build-only up -d --build --wait
 ```
 
 Abra `http://localhost:8080`. O frontend e a entrada RTMP sao as interfaces principais.
