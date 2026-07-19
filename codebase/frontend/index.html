@@ -16,6 +16,7 @@
         <span class="brand-mark" aria-hidden="true"></span>
         <span>Distributed Live</span>
       </a>
+      <button class="start-live-btn" id="start-live-btn" type="button">Iniciar Live</button>
       <div class="connection-status" id="connection-status" role="status">
         <span class="status-dot" aria-hidden="true"></span>
         <span id="connection-label">Carregando</span>
@@ -75,5 +76,27 @@
         </form>
       </aside>
     </main>
+    <dialog class="live-modal" id="live-modal" aria-labelledby="modal-title">
+      <div class="modal-content">
+        <h2 id="modal-title">Sua live foi criada</h2>
+        <p class="modal-instructions">Configure o OBS Studio com as informacoes abaixo:</p>
+        <ol class="obs-steps">
+          <li>Abra o OBS Studio e va em <strong>Configuracoes &gt; Transmissao</strong></li>
+          <li>Em <strong>Servico</strong>, selecione <em>Personalizado</em></li>
+          <li>Cole o <strong>Servidor</strong> abaixo</li>
+          <li>Cole a <strong>Chave da transmissao</strong> abaixo</li>
+          <li>Clique em <strong>Iniciar transmissao</strong></li>
+        </ol>
+        <div class="modal-field">
+          <label for="modal-rtmp-server">Servidor</label>
+          <input id="modal-rtmp-server" readonly />
+        </div>
+        <div class="modal-field">
+          <label for="modal-stream-key">Chave da transmissao</label>
+          <input id="modal-stream-key" readonly />
+        </div>
+        <button class="modal-close-btn" id="modal-close-btn" type="button">Fechar</button>
+      </div>
+    </dialog>
   </body>
 </html>

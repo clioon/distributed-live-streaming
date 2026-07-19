@@ -413,3 +413,114 @@ h2 {
     display: block;
   }
 }
+
+
+.start-live-btn {
+  min-height: 36px;
+  padding: 0 16px;
+  border: 0;
+  border-radius: 5px;
+  background: var(--coral);
+  color: #fff;
+  font-weight: 700;
+  font-size: 13px;
+  cursor: pointer;
+  transition: opacity 0.15s;
+}
+
+.start-live-btn:hover {
+  opacity: 0.85;
+}
+
+.start-live-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.live-modal {
+  max-width: 520px;
+  width: 90vw;
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  box-shadow: 0 24px 48px rgb(30 42 36 / 16%);
+}
+
+.live-modal::backdrop {
+  background: rgb(27 33 30 / 50%);
+}
+
+.modal-content {
+  padding: 28px 32px;
+}
+
+.modal-content h2 {
+  margin: 0 0 8px;
+  font-size: 20px;
+}
+
+.modal-instructions {
+  margin: 0 0 16px;
+  color: var(--muted);
+  font-size: 14px;
+}
+
+.obs-steps {
+  margin: 0 0 20px;
+  padding-left: 20px;
+  font-size: 13px;
+  line-height: 1.7;
+  color: var(--ink);
+}
+
+.obs-steps li {
+  margin-bottom: 4px;
+}
+
+.modal-field {
+  margin-bottom: 14px;
+}
+
+.modal-field label {
+  display: block;
+  margin-bottom: 4px;
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+}
+
+.modal-field input {
+  width: 100%;
+  min-height: 40px;
+  padding: 0 12px;
+  border: 1px solid var(--line);
+  border-radius: 5px;
+  background: var(--canvas);
+  color: var(--ink);
+  font-size: 13px;
+  font-family: "Courier New", monospace;
+}
+
+.modal-field input:focus {
+  border-color: var(--teal);
+  outline: 2px solid rgb(0 127 115 / 15%);
+}
+
+.modal-close-btn {
+  margin-top: 8px;
+  min-height: 40px;
+  width: 100%;
+  border: 0;
+  border-radius: 5px;
+  background: var(--teal);
+  color: #fff;
+  font-weight: 700;
+  font-size: 14px;
+  cursor: pointer;
+}
+
+.modal-close-btn:hover {
+  opacity: 0.9;
+}

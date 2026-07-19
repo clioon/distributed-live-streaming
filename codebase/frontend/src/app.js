@@ -154,6 +154,35 @@ elements.chatForm.addEventListener("submit", (event) => {
   elements.chatInput.value = "";
 });
 
+const modal = document.querySelector("#live-modal");
+const startLiveBtn = document.querySelector("#start-live-btn");
+const modalCloseBtn = document.querySelector("#modal-close-btn");
+const modalRtmpServer = document.querySelector("#modal-rtmp-server");
+const modalStreamKey = document.querySelector("#modal-stream-key");
+
+startLiveBtn.addEventListener("click", async () => {
+  startLiveBtn.disabled = true;
+  try {
+    const title = `Live ${new Date().toLocaleString("pt-BR")}`;
+    const result = await api.createLive({ title });
+    modalRtmpServer.value = result.rtmp_server;
+    modalStreamKey.value = result.stream_key;
+    modal.showModal();
+  } catch (error) {
+    alert(`Erro ao criar live: ${error.message}`);
+  } finally {
+    startLiveBtn.disabled = false;
+  }
+});
+
+modalCloseBtn.addEventListener("click", () => {
+  modal.close();
+});
+
+modal.addEventListener("close", () => {
+  loadCatalog({ silent: true });
+});
+
 async function loadCatalog({ silent = false } = {}) {
   if (!silent) dispatch({ type: "catalog.loading" });
   try {
