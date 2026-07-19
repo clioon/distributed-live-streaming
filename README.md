@@ -18,7 +18,7 @@ Abra `http://localhost:8080`. O frontend e a entrada RTMP sao as interfaces prin
 | PostgreSQL write via HAProxy | `localhost:55432` |
 | PostgreSQL read via HAProxy | `localhost:55433` |
 
-Crie uma live para obter a chave RTMP:
+Crie uma live para obter a chave RTMP pela própria interface web, ou pelo comando:
 
 ```powershell
 $live = Invoke-RestMethod `
